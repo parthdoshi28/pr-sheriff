@@ -33,22 +33,43 @@ python scripts/fetch_ticket.py <TICKET_ID>
 
 Scan the ticket object's `description` field for Unity Catalog table references.
 Look for patterns like `catalog.schema.table` (three dot-separated identifiers) and plain UC table names.
-Build a space-separated list. If none found, use an empty list and note it to the user.
+Build a list of unique `catalog.schema.table` strings. If none found, note it to the user and use an empty schema object `{}`.
 
-### Step 4 — Fetch schema metadata
+### Step 4 — Fetch schema metadata via Databricks MCP
 
-If table references were found:
-```bash
-python scripts/get_schema.py <table1> <table2> ...
+For each unique `catalog.schema` pair in the table list, call the Databricks MCP tool:
+
+```
+get_table_stats_and_schema(
+  catalog = "<catalog>",
+  schema  = "<schema>",
+  table_names = ["<table>"],
+  table_stat_level = "NONE"
+)
 ```
 
-If no tables found, run with a single placeholder:
-```bash
-python scripts/get_schema.py none
+Build a **schema object** in this exact structure (required by `create_branch.py`):
+
+```json
+{
+  "catalog.schema.table": {
+    "columns": [
+      {"name": "col_name", "type": "data_type", "description": "comment or empty string", "source": "unity_catalog"}
+    ],
+    "source": "unity_catalog"
+  }
+}
 ```
 
-- If exit code ≠ 0: print the error and stop.
-- Parse stdout as JSON. This is the **schema object**.
+Map the MCP response fields: `name` → `name`, `data_type`/`type` → `type`, `comment` → `description`.
+
+**If a table is not returned by the MCP** (absent in dev UC), fall back to `get_schema.py` for that table only:
+```bash
+python scripts/get_schema.py <catalog.schema.table>
+```
+Merge its output into the schema object. Note the fallback to the user.
+
+If no tables were found in Step 3, use `{}` as the schema object.
 
 ### Step 5 — Create branch and Draft PR
 

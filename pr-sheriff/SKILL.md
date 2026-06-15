@@ -53,13 +53,16 @@ If `TARGET` is missing, ask for it before doing anything else.
 
 ## Prerequisites
 
+**Standalone — no credentials required.** pr-sheriff runs fully offline.
+
 - Python 3.9+ on PATH.
 - `pyyaml` available (`pip install pyyaml`). If missing, the agent should
   install it before running scripts.
 - *(Optional)* Databricks MCP server configured in Cursor — enables a live
   table-existence fallback when `check_refs.py` can't find a ref/source in
-  the local repo files. See [`SETUP.md`](SETUP.md) for configuration
-  instructions.
+  the local repo files. See [SETUP.md](SETUP.md) for optional MCP configuration.
+
+For code-creator or dbt-workflow credential setup, see [SETUP.md](../SETUP.md) at the repo root — not required for pr-sheriff alone.
 
 ## Workflow
 
@@ -79,6 +82,9 @@ Copy this checklist and track progress as you go:
 Let `SKILL_DIR` be the directory containing this `SKILL.md` (e.g.
 `~/.cursor/skills/pr-sheriff/` when installed as a personal skill). All
 scripts below live in `<SKILL_DIR>/scripts/`.
+
+This skill lives at `<repo>/pr-sheriff/` in the monorepo. Sibling skills:
+`../code-creator/` and `../dbt-workflow/`.
 
 ### Step 1 - Discover project
 

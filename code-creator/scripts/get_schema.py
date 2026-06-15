@@ -20,6 +20,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from _env import load_dotenv_file, require_vars
+
 try:
     import truststore
     truststore.inject_into_ssl()
@@ -28,21 +30,10 @@ except ImportError:
 
 
 def load_env():
-    required = [
+    env = require_vars([
         "DATABRICKS_HOST", "DATABRICKS_HTTP_PATH", "DATABRICKS_ACCESS_TOKEN",
         "GITHUB_TOKEN", "GITHUB_REPO",
-    ]
-    env = {}
-    missing = []
-    for var in required:
-        val = os.environ.get(var)
-        if not val:
-            missing.append(var)
-        env[var] = val
-    if missing:
-        for var in missing:
-            print(f"Missing required environment variable: {var}", file=sys.stderr)
-        sys.exit(1)
+    ])
     env["GITHUB_BASE_BRANCH"] = os.environ.get("GITHUB_BASE_BRANCH", "dev")
     return env
 

@@ -23,6 +23,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from _env import require_vars
+
 try:
     import truststore
     truststore.inject_into_ssl()
@@ -258,17 +260,7 @@ def put_file(token, repo, branch, path, content, message, sha=None):
 # ──────────────────────────────────────────────
 
 def load_env():
-    env = {}
-    missing = []
-    for var in ["GITHUB_TOKEN", "GITHUB_REPO"]:
-        val = os.environ.get(var)
-        if not val:
-            missing.append(var)
-        env[var] = val
-    if missing:
-        for var in missing:
-            print(f"Missing required environment variable: {var}", file=sys.stderr)
-        sys.exit(1)
+    env = require_vars(["GITHUB_TOKEN", "GITHUB_REPO"])
     env["GITHUB_BASE_BRANCH"] = os.environ.get("GITHUB_BASE_BRANCH", "dev")
     return env
 

@@ -1,147 +1,102 @@
-# PR Sheriff — Setup Guide
+# dbt Agent Skills — Setup
 
-## Prerequisites
+One-time setup before using **code-creator** or **dbt-workflow**. **pr-sheriff** is standalone and does not need any of this.
 
-| Requirement | Notes |
-|-------------|-------|
-| Python 3.9+ | Must be on `PATH` |
-| `pyyaml` | `pip install pyyaml` |
-| Cursor **or** Claude Code | Cursor (GUI) or Claude Code CLI (`claude`) — see installation below |
-| Databricks MCP *(optional)* | Enables live table-existence fallback — see below |
+## Which skill needs what?
 
----
-
-## Installation
-
-### Cursor
-
-Clone into your Cursor personal skills directory, then **restart Cursor** so it picks up the skill.
-
-**Mac / Linux**
-```bash
-git clone https://github.com/parthdoshi28/pr-sheriff.git ~/.cursor/skills/pr-sheriff
-```
-
-**Windows (PowerShell)**
-```powershell
-git clone https://github.com/parthdoshi28/pr-sheriff.git "$env:USERPROFILE\.cursor\skills\pr-sheriff"
-```
-
-To confirm it loaded: open the command palette and type `pr-sheriff` — the skill should appear.
-
-### Claude Code
-
-Clone into your Claude Code personal skills directory, then **restart Claude Code** so it picks up the skill.
-
-**Mac / Linux**
-```bash
-git clone https://github.com/parthdoshi28/pr-sheriff.git ~/.claude/skills/pr-sheriff
-```
-
-**Windows (PowerShell)**
-```powershell
-git clone https://github.com/parthdoshi28/pr-sheriff.git "$env:USERPROFILE\.claude\skills\pr-sheriff"
-```
-
-To confirm it loaded: type `/pr-sheriff` in the chat — Claude Code should recognize the skill.
+| Skill | Credentials | Network | Notes |
+|-------|-------------|---------|-------|
+| **pr-sheriff** | None | Offline | Needs Python 3.9+ and `pyyaml` only |
+| **code-creator** | Jira, Databricks, GitHub | Yes | Also needs Databricks + Jira MCP in Cursor |
+| **dbt-workflow** | Same as code-creator | Yes | Runs code-creator then pr-sheriff |
 
 ---
 
-## Usage
-
-### Cursor
-
-```
-Use pr-sheriff to validate models/marts/my_model.sql
-```
-
-### Claude Code
-
-```
-/pr-sheriff models/marts/my_model.sql
-```
-
-The skill will run all four checks and print a structured report with `PASS` / `FAIL` / `WARN` verdicts.
-
----
-
-## Optional: Databricks MCP fallback
-
-Without MCP, pr-sheriff is fully offline. It validates refs/sources by scanning files in the local repo. If a `ref()` or `source()` target isn't found in the repo (because it lives in another repo, is externally managed, or is just not cloned locally), the check returns `FAIL`.
-
-With a Databricks MCP server configured, the skill will automatically query Unity Catalog for any unresolved table and downgrade the verdict to `WARN` if the table is found there.
-
-### Configure the MCP server
-
-The JSON config is the same for both tools — only the file path differs.
-
-#### Cursor — `~/.cursor/mcp.json`
-
-Create or edit `~/.cursor/mcp.json`:
-
-#### Claude Code — `~/.claude/mcp.json`
-
-Create or edit `~/.claude/mcp.json`:
-
-**Config content (same for both):**
-
-```json
-{
-  "mcpServers": {
-    "databricks-dev": {
-      "type": "streamable-http",
-      "url": "https://<YOUR_DEV_WORKSPACE>.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
-      "headers": {
-        "Authorization": "Bearer <YOUR_DEV_TOKEN>"
-      }
-    },
-    "databricks-prd": {
-      "type": "streamable-http",
-      "url": "https://<YOUR_PRD_WORKSPACE>.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
-      "headers": {
-        "Authorization": "Bearer <YOUR_PRD_TOKEN>"
-      }
-    }
-  }
-}
-```
-
-A ready-to-copy template is available in [`mcp-config-template.json`](mcp-config-template.json).
-
-**Naming convention**: the skill infers which MCP server to use from the target SQL's env-tags (e.g. a model tagged `us_dev` will prefer a server named `databricks-dev` or `databricks-us-dev`). If no match is found, it falls back to any configured `databricks-*` server.
-
-### Get a Databricks personal access token
-
-1. Open your Databricks workspace.
-2. Click your username (top right) → **Settings** → **Developer** → **Access tokens**.
-3. Click **Generate new token**, give it a name and expiry, copy the value.
-4. Paste it into the `Authorization: Bearer <token>` header in the MCP config above.
-
-For production use, consider a service principal token instead of a personal one. See the [Databricks token docs](https://docs.databricks.com/en/dev-tools/auth/pat.html) for details.
-
-### Verify MCP is working
-
-After adding the config, restart your tool. Then run the skill against a model that has external dependencies:
-
-- **Cursor**: `Use pr-sheriff to validate models/marts/some_model_with_external_deps.sql`
-- **Claude Code**: `/pr-sheriff models/marts/some_model_with_external_deps.sql`
-
-If the MCP connection is working, refs to tables outside the local repo will show `⚠` (WARN) instead of `❌` (FAIL) in the References section, with a note indicating the table was found in Databricks.
-
----
-
-## Running checks manually
-
-All scripts can be run individually from the command line for debugging:
+## Step 1 — Python dependencies
 
 ```bash
-# Full pass in one shot
-python scripts/_run_all.py path/to/model.sql
-
-# Individual scripts (each prints JSON to stdout)
-python scripts/discover_project.py path/to/model.sql
-python scripts/parse_target.py path/to/model.sql /path/to/dbt/project
-python scripts/check_refs.py parsed.json discovery.json
-python scripts/check_columns.py path/to/model.sql parsed.json refs.json discovery.json
-python scripts/check_env.py parsed.json refs.json
+pip install pyyaml databricks-sql-connector
 ```
+
+- `pyyaml` — pr-sheriff
+- `databricks-sql-connector` — code-creator schema fallback (`get_schema.py`)
+
+---
+
+## Step 2 — Credential setup (code-creator / dbt-workflow only)
+
+Run the interactive wizard from the repo root (or from `code-creator/`):
+
+```bash
+python code-creator/scripts/setup_credentials.py
+```
+
+It prompts for:
+
+| Variable | Used for |
+|----------|----------|
+| `JIRA_BASE_URL` | Atlassian instance URL |
+| `JIRA_EMAIL` | Your Atlassian email |
+| `JIRA_API_TOKEN` | [Atlassian API token](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `DATABRICKS_HOST` | Databricks workspace URL |
+| `DATABRICKS_HTTP_PATH` | SQL warehouse HTTP path |
+| `DATABRICKS_ACCESS_TOKEN` | Databricks personal access token |
+| `GITHUB_TOKEN` | [GitHub PAT](https://github.com/settings/tokens) with Contents + Pull requests write |
+| `GITHUB_REPO` | Target repo (`org/repo`) |
+| `GITHUB_BASE_BRANCH` | Branch to cut features from (default: `dev`) |
+
+Credentials are written to `code-creator/.env` (gitignored). Scripts load these automatically when present.
+
+### Verify setup
+
+```bash
+python code-creator/scripts/check_setup.py
+```
+
+Exit code `0` and `"status": "PASS"` means you can run code-creator or dbt-workflow.
+
+If setup is incomplete, the agent must **stop** and ask you to run `setup_credentials.py` before continuing.
+
+### Re-run or update credentials
+
+Run `setup_credentials.py` again. Press Enter on a field to keep an existing non-secret value.
+
+---
+
+## Step 3 — Cursor MCP (code-creator / dbt-workflow only)
+
+The agent uses MCP tools in addition to `.env`:
+
+| MCP tool | Purpose |
+|----------|---------|
+| Databricks `get_table_stats_and_schema` | Pull Unity Catalog column metadata |
+| Jira `addCommentToJiraIssue` | Post branch summary on the ticket |
+
+Configure Databricks MCP in Cursor (profile or token pointing at your dev workspace). See [pr-sheriff/SETUP.md](pr-sheriff/SETUP.md) for optional Databricks MCP used by pr-sheriff's ref fallback — that is separate and optional.
+
+---
+
+## Step 4 — Install skills
+
+See [README.md](README.md) for cloning and symlinking `code-creator/`, `pr-sheriff/`, and `dbt-workflow/`.
+
+---
+
+## Quick reference
+
+```bash
+# Offline validation — no setup needed beyond pyyaml
+Use pr-sheriff to validate path/to/model.sql
+
+# Online skills — run setup first
+python code-creator/scripts/setup_credentials.py
+python code-creator/scripts/check_setup.py
+Use code-creator for CNGBA-123
+Use dbt-workflow for CNGBA-123
+```
+
+---
+
+## pr-sheriff-only setup
+
+If you only use **pr-sheriff**, skip Steps 2–3. Optional Databricks MCP for live ref fallback: [pr-sheriff/SETUP.md](pr-sheriff/SETUP.md).

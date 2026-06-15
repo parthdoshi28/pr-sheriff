@@ -1,64 +1,98 @@
-# PR Sheriff
+# dbt Agent Skills
 
-Skill for Cursor and Claude Code that validates a single dbt `.sql` model offline (no warehouse connection):
+Three Cursor / Claude Code skills for the CNGBA dbt workflow — install individually or together from this repo.
 
-- **CLAUDE.md compliance** — project root rules applied to the SQL
-- **Reference existence** — every `ref()` / `source()` resolves to a real model or `sources.yml` entry
-- **Env consistency** — deployment env-tags on the target are a subset of each dependency's env-tags
-- **Column checks** — qualified column references match declared schema/source YAML columns
+| Skill | Directory | Purpose |
+|-------|-----------|---------|
+| **code-creator** | [`code-creator/`](code-creator/) | Generate a draft dbt model from a Jira ticket |
+| **pr-sheriff** | [`pr-sheriff/`](pr-sheriff/) | Validate a dbt `.sql` model offline |
+| **dbt-workflow** | [`dbt-workflow/`](dbt-workflow/) | Run code-creator then pr-sheriff in sequence |
 
-Databricks-flavored. File-scan only — no `dbt compile`, no `manifest.json` required.
+## Prerequisites
 
-## Install
+Clone this repo once, then symlink (or copy) each skill you want into your skills directory. Restart Cursor or Claude Code after installing.
 
-**Prerequisites:** Python 3.9+ and `pyyaml` (`pip install pyyaml`). Then clone into your skills directory and restart the tool.
+| Skill | Setup required? |
+|-------|-----------------|
+| **pr-sheriff** | Python 3.9+ and `pip install pyyaml` only — runs offline |
+| **code-creator** | [SETUP.md](SETUP.md) — Jira, Databricks, GitHub credentials |
+| **dbt-workflow** | Same as code-creator |
 
-**Cursor**
+**First time using code-creator or dbt-workflow:**
+
 ```bash
-# Mac / Linux
-git clone https://github.com/parthdoshi28/pr-sheriff.git ~/.cursor/skills/pr-sheriff
-# Windows (PowerShell)
-git clone https://github.com/parthdoshi28/pr-sheriff.git "$env:USERPROFILE\.cursor\skills\pr-sheriff"
+python code-creator/scripts/setup_credentials.py
+python code-creator/scripts/check_setup.py
 ```
 
-**Claude Code**
-```bash
-# Mac / Linux
-git clone https://github.com/parthdoshi28/pr-sheriff.git ~/.claude/skills/pr-sheriff
-# Windows (PowerShell)
-git clone https://github.com/parthdoshi28/pr-sheriff.git "$env:USERPROFILE\.claude\skills\pr-sheriff"
+### Cursor
+
+```powershell
+# Clone the repo
+git clone https://github.com/parthdoshi28/pr-sheriff.git "$env:USERPROFILE\.cursor\skills\dbt-agent-skills"
+
+# Symlink individual skills (pick any or all three)
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.cursor\skills\code-creator" -Target "$env:USERPROFILE\.cursor\skills\dbt-agent-skills\code-creator"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.cursor\skills\pr-sheriff" -Target "$env:USERPROFILE\.cursor\skills\dbt-agent-skills\pr-sheriff"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.cursor\skills\dbt-workflow" -Target "$env:USERPROFILE\.cursor\skills\dbt-agent-skills\dbt-workflow"
 ```
 
-For optional Databricks MCP setup (enables live table-existence fallback for refs not in the local repo), see [SETUP.md](SETUP.md).
+Mac / Linux — replace `$env:USERPROFILE\.cursor\skills` with `~/.cursor/skills` and use `ln -s` instead of `New-Item`.
+
+### Claude Code
+
+Same pattern under `~/.claude/skills/` (or `%USERPROFILE%\.claude\skills\` on Windows).
+
+### Without symlinks
+
+Reference a skill file directly in chat, e.g. `@dbt-agent-skills/pr-sheriff/SKILL.md`.
 
 ## Use
 
-**Cursor**
+**Create a draft model from a ticket**
+
+```
+Use code-creator for CNGBA-123
+```
+
+**Validate an existing model**
+
 ```
 Use pr-sheriff to validate models/marts/my_model.sql
 ```
 
-**Claude Code**
+**Full pipeline (create + validate)**
+
 ```
-/pr-sheriff models/marts/my_model.sql
-```
-
-See [SKILL.md](SKILL.md) for the full workflow, scripts, and report format.
-
-## Scripts
-
-Run checks manually from the skill directory:
-
-```bash
-python scripts/discover_project.py path/to/model.sql
-python scripts/parse_target.py path/to/model.sql <project_root>
-python scripts/check_refs.py parsed.json discovery.json
-python scripts/check_columns.py path/to/model.sql parsed.json refs.json discovery.json
-python scripts/check_env.py parsed.json refs.json
+Use dbt-workflow for CNGBA-123
 ```
 
-Or run all checks in one pass:
+When using **code-creator** or **pr-sheriff** alone, review that skill's output before starting another step. **dbt-workflow** pauses between phases unless the user already asked to run both.
 
-```bash
-python scripts/_run_all.py path/to/model.sql
+## Repository layout
+
 ```
+dbt-agent-skills/          ← clone target (repo name: pr-sheriff)
+├── README.md              ← this file
+├── SETUP.md               ← credential setup (code-creator / dbt-workflow)
+├── code-creator/
+│   ├── SKILL.md
+│   ├── scripts/
+│   │   ├── setup_credentials.py
+│   │   └── check_setup.py
+│   └── README.md
+├── pr-sheriff/
+│   ├── SKILL.md
+│   ├── scripts/
+│   ├── report-template.md
+│   └── SETUP.md           ← optional Databricks MCP for pr-sheriff
+└── dbt-workflow/
+    └── SKILL.md           ← wrapper orchestrating the other two
+```
+
+## Child skill docs
+
+- [SETUP.md](SETUP.md) — credential wizard for code-creator and dbt-workflow
+- [code-creator README](code-creator/README.md) — Jira + Databricks + GitHub details
+- [pr-sheriff SKILL.md](pr-sheriff/SKILL.md) — offline validation workflow
+- [pr-sheriff SETUP.md](pr-sheriff/SETUP.md) — optional Databricks MCP for ref fallback

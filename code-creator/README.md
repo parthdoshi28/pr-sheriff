@@ -20,24 +20,18 @@ pip install databricks-sql-connector
 
 ## Setup
 
-1. Clone this repo (or copy this directory alongside the `kyc-data-pipelines` repo):
-   ```
-   kyc-data-pipelines/     ← existing repo
-   code-creator/           ← this directory
-   ```
+1. Clone the [dbt agent skills](../README.md) repo (see root [SETUP.md](../SETUP.md)).
 
-2. Copy `.env.example` to `.env` and fill in your credentials:
+2. Run the credential wizard (writes `code-creator/.env`):
+
    ```bash
-   cp .env.example .env
-   # edit .env with your Jira email/token, Databricks token, and GitHub token
+   python code-creator/scripts/setup_credentials.py
+   python code-creator/scripts/check_setup.py
    ```
 
-3. Load the `.env` file in your shell (or set the variables in your environment):
-   ```bash
-   export $(grep -v '^#' .env | xargs)
-   ```
+3. Configure Databricks and Jira MCP in Cursor (see [SETUP.md](../SETUP.md)).
 
-4. Open this directory in VS Code with the Claude Code extension active.
+4. Open your dbt project in Cursor with Claude Code or the agent enabled.
 
 ---
 

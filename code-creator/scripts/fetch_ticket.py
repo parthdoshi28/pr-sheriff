@@ -15,6 +15,8 @@ import sys
 import urllib.error
 import urllib.request
 
+from _env import require_vars
+
 try:
     import truststore
     truststore.inject_into_ssl()
@@ -23,20 +25,7 @@ except ImportError:
 
 
 def load_env():
-    """Load required env vars; print missing ones and exit 1 if any are absent."""
-    vars_needed = ["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN", "GITHUB_TOKEN", "GITHUB_REPO"]
-    env = {}
-    missing = []
-    for var in vars_needed:
-        val = os.environ.get(var)
-        if not val:
-            missing.append(var)
-        env[var] = val
-    if missing:
-        for var in missing:
-            print(f"Missing required environment variable: {var}", file=sys.stderr)
-        sys.exit(1)
-    return env
+    return require_vars(["JIRA_BASE_URL", "JIRA_EMAIL", "JIRA_API_TOKEN", "GITHUB_TOKEN", "GITHUB_REPO"])
 
 
 def jira_get(base_url, email, token, path):

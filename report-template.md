@@ -21,6 +21,8 @@
 - ✅ ref('<name>') → `<resolved_path>`
 - ❌ source('<src>', '<tbl>')  — not found in any sources.yml
 - ⚠ ref('<name>')  — multiple matches: <paths>
+- ⚠ ref('<name>')  — not in repo files, found in Databricks at `<catalog.schema.table_name>` (MCP fallback)
+- ❌ ref('<name>')  — not found in repo files or Databricks catalog
 
 ## 3. Env consistency (env-tags)
 

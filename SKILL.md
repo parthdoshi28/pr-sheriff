@@ -56,6 +56,10 @@ If `TARGET` is missing, ask for it before doing anything else.
 - Python 3.9+ on PATH.
 - `pyyaml` available (`pip install pyyaml`). If missing, the agent should
   install it before running scripts.
+- *(Optional)* Databricks MCP server configured in Cursor — enables a live
+  table-existence fallback when `check_refs.py` can't find a ref/source in
+  the local repo files. See [`SETUP.md`](SETUP.md) for configuration
+  instructions.
 
 ## Workflow
 
@@ -65,6 +69,7 @@ Copy this checklist and track progress as you go:
 - [ ] Step 1: Discover project (dbt_project.yml, CLAUDE.md, file index)
 - [ ] Step 2: Parse target (refs, sources, env signal)
 - [ ] Step 3: Check references exist
+- [ ] Step 3c: MCP fallback for any unresolved refs/sources (skip if no Databricks MCP configured)
 - [ ] Step 3b: Check column existence
 - [ ] Step 4: Check env consistency
 - [ ] Step 5: Read CLAUDE.md and apply rules to the SQL
@@ -99,6 +104,38 @@ python <SKILL_DIR>/scripts/check_refs.py <parsed.json> <discovery.json>
 ```
 
 Emits JSON list of `{kind, raw, status: PASS|FAIL|WARN, detail, resolved_env}`.
+
+### Step 3c - MCP fallback (optional)
+
+**Skip this step if no Databricks MCP server is configured in Cursor.**
+
+For each row from Step 3 with `status: FAIL`, attempt a live lookup against
+Unity Catalog using the Databricks MCP tool:
+
+1. Determine the table name:
+   - For `ref('<name>')`: use `<name>`.
+   - For `source('<src>', '<tbl>')`: use `<tbl>`.
+2. Determine catalog/schema from parsed env (`catalog` and `schema` fields
+   from Step 2 output), if available.
+3. Select the MCP server whose name best matches the target's env-tags
+   (e.g. a model tagged `us_dev` prefers `databricks-dev` or
+   `databricks-us-dev`). If no match, fall back to any configured
+   `databricks-*` server.
+4. Use the MCP SQL execution tool to run:
+   ```sql
+   SELECT table_catalog, table_schema, table_name
+   FROM system.information_schema.tables
+   WHERE lower(table_name) = lower('<table_name>')
+   LIMIT 10
+   ```
+   Optionally narrow by `table_schema` and `table_catalog` if known from the
+   parsed env.
+5. Apply the result:
+   - **Found**: upgrade that row's status from `FAIL` to `WARN` and note
+     `"not in repo files, found in Databricks at <catalog.schema.table_name>"`.
+   - **Not found**: keep as `FAIL`, note
+     `"not found in repo files or Databricks catalog"`.
+   - **MCP error**: keep as `FAIL`, note `"MCP lookup failed: <error message>"`.
 
 ### Step 3b - Check columns
 

@@ -1,6 +1,6 @@
 # PR Sheriff
 
-Cursor Agent Skill that validates a single dbt `.sql` model offline (no warehouse connection):
+Skill for Cursor and Claude Code that validates a single dbt `.sql` model offline (no warehouse connection):
 
 - **CLAUDE.md compliance** — project root rules applied to the SQL
 - **Reference existence** — every `ref()` / `source()` resolves to a real model or `sources.yml` entry
@@ -11,26 +11,36 @@ Databricks-flavored. File-scan only — no `dbt compile`, no `manifest.json` req
 
 ## Install
 
-Clone into your personal Cursor skills directory:
+**Prerequisites:** Python 3.9+ and `pyyaml` (`pip install pyyaml`). Then clone into your skills directory and restart the tool.
 
+**Cursor**
 ```bash
+# Mac / Linux
 git clone https://github.com/parthdoshi28/pr-sheriff.git ~/.cursor/skills/pr-sheriff
-```
-
-Or on Windows (PowerShell):
-
-```powershell
+# Windows (PowerShell)
 git clone https://github.com/parthdoshi28/pr-sheriff.git "$env:USERPROFILE\.cursor\skills\pr-sheriff"
 ```
 
-**Prerequisites:** Python 3.9+ and `pyyaml` (`pip install pyyaml`).
+**Claude Code**
+```bash
+# Mac / Linux
+git clone https://github.com/parthdoshi28/pr-sheriff.git ~/.claude/skills/pr-sheriff
+# Windows (PowerShell)
+git clone https://github.com/parthdoshi28/pr-sheriff.git "$env:USERPROFILE\.claude\skills\pr-sheriff"
+```
+
+For optional Databricks MCP setup (enables live table-existence fallback for refs not in the local repo), see [SETUP.md](SETUP.md).
 
 ## Use
 
-In Cursor, invoke the skill explicitly and provide a dbt model path:
-
+**Cursor**
 ```
 Use pr-sheriff to validate models/marts/my_model.sql
+```
+
+**Claude Code**
+```
+/pr-sheriff models/marts/my_model.sql
 ```
 
 See [SKILL.md](SKILL.md) for the full workflow, scripts, and report format.

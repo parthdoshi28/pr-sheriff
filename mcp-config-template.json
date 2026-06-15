@@ -1,0 +1,19 @@
+{
+  "_comment": "Copy the mcpServers block into ~/.cursor/mcp.json (merge with any existing mcpServers entries). Remove this _comment key before saving. Replace every <PLACEHOLDER> (angle brackets included) with your actual values. Add or remove server entries to match your environments.",
+  "mcpServers": {
+    "databricks-dev": {
+      "type": "streamable-http",
+      "url": "https://<YOUR_DEV_WORKSPACE>.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+      "headers": {
+        "Authorization": "Bearer <YOUR_DEV_TOKEN>"
+      }
+    },
+    "databricks-prd": {
+      "type": "streamable-http",
+      "url": "https://<YOUR_PRD_WORKSPACE>.cloud.databricks.com/api/2.0/mcp/functions/system/ai",
+      "headers": {
+        "Authorization": "Bearer <YOUR_PRD_TOKEN>"
+      }
+    }
+  }
+}

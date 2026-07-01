@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "branch=$(git branch --show-current 2>/dev/null); if echo \"$branch\" | grep -qE \"^(main|master|prd|stg|dev)$\"; then echo \"{\\\"decision\\\":\\\"block\\\",\\\"reason\\\":\\\"You are on protected branch '$branch'. Create a feature branch first: git fetch origin && git checkout -b feature/TICKET-desc origin/dev\\\"}\"; else exit 0; fi",
+            "shell": "bash"
+          }
+        ]
+      }
+    ]
+  }
+}
